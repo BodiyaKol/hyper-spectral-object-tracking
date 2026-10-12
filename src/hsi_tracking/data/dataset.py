@@ -1,0 +1,1 @@
+"""HOT2026 dataset and PyTorch DataLoader integration."""

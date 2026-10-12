@@ -1,4 +1,34 @@
-# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# HOT2026 data is governed by the challenge's distribution terms.
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/README.md
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Checkpoints and generated experiment outputs stay out of Git.
+models/*
+!models/.gitkeep
+!models/README.md
+results/predictions/*
+!results/predictions/.gitkeep
+results/visualizations/*
+!results/visualizations/.gitkeep# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class

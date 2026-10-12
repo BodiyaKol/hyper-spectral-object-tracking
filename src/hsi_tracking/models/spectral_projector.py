@@ -1,0 +1,1 @@
+"""Trainable projection from sensor bands to the ViPT three-channel input."""

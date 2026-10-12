@@ -1,0 +1,29 @@
+seed: 42
+
+paths:
+  dataset_root: data/raw/HOT2026
+  model_checkpoint: models/vipt.pth
+  output_dir: results
+
+data:
+  sensors:
+    VIS:
+      channels: 16
+    NIR:
+      channels: 25
+    RedNIR:
+      channels: 15
+
+model:
+  backbone: ViPT
+  input_channels: 3
+  freeze_backbone: true
+  freeze_prediction_head: true
+  trainable_parameter_ratio_limit: 0.029
+
+evaluation:
+  metrics:
+    - AUC
+    - DP@20
+    - FPS
+  output_csv: results/predictions/submission.csv

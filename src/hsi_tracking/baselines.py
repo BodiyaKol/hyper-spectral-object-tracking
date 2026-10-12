@@ -1,0 +1,1 @@
+"""Static-box, false-color SAMURAI, and HSI tracker baselines."""

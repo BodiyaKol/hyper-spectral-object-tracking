@@ -1,0 +1,1 @@
+"""CNN adapter for generating spatial-spectral prompts."""

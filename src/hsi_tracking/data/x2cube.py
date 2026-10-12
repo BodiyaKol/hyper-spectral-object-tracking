@@ -1,0 +1,1 @@
+"""Conversion utilities for the HOT2026 X2Cube data format."""
