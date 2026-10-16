@@ -54,7 +54,7 @@ conda create -n vipt python=3.7 -y
 conda activate vipt
 
 # Якщо third_party/ViPT ще не клонований:
-git clone https://github.com/jiawen-zhu/ViPT.git third_party/ViPT
+mkdir -p third_party && git clone https://github.com/jiawen-zhu/ViPT.git third_party/ViPT
 
 python -m pip install -r requirements-vipt-cpu.txt
 python scripts/patch_vipt_cpu.py
