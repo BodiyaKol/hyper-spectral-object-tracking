@@ -16,6 +16,7 @@ htmlcov/
 data/raw/*
 !data/raw/.gitkeep
 !data/raw/README.md
+data/
 data/interim/*
 !data/interim/.gitkeep
 data/processed/*
@@ -246,3 +247,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local upstream ViPT checkout and its isolated environment.
+/third_party/ViPT/
+/.venv-vipt/
