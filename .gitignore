@@ -27,6 +27,8 @@ models/*
 !models/.gitkeep
 !models/README.md
 results/predictions/*
+results/plots/*
+!results/plots/.gitkeep
 !results/predictions/.gitkeep
 results/visualizations/*
 !results/visualizations/.gitkeep# Byte-compiled / optimized / DLL files
