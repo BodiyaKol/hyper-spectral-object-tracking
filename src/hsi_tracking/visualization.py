@@ -4,6 +4,15 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
+import matplotlib.pyplot as plt
+
+from hsi_tracking.evaluation import (
+    calculate_auc,
+    calculate_dp20,
+    calculate_success_curve,
+    calculate_precision_curve,
+)
+
 
 def save_initial_frame_preview(
     sequence_dir: str | Path,
@@ -46,3 +55,81 @@ def save_initial_frame_preview(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
     return output_path
+
+
+def plot_tracking_metrics(
+    ground_truth_boxes,
+    predicted_boxes,
+    model_name="SAMURAI",
+    output_dir="results/plots",
+):
+    """Generate Success and Precision plots for tracking evaluation."""
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Calculate evaluation metrics
+    auc = calculate_auc(ground_truth_boxes, predicted_boxes)
+    dp20 = calculate_dp20(ground_truth_boxes, predicted_boxes)
+
+    # Calculate plot data
+    success_thresholds, success_rates = calculate_success_curve(
+        ground_truth_boxes, predicted_boxes
+    )
+
+    precision_thresholds, precision_rates = calculate_precision_curve(
+        ground_truth_boxes, predicted_boxes
+    )
+
+    # Success Plot
+    plt.figure(figsize=(8, 5))
+    plt.plot(
+        success_thresholds,
+        success_rates,
+        linewidth=2,
+        label=f"{model_name} (AUC={auc:.3f})",
+    )
+
+    plt.xlabel("IoU Threshold")
+    plt.ylabel("Success Rate")
+    plt.title("Tracking Success Plot")
+    plt.xlim(0, 1)
+    plt.ylim(0, 1.05)
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    success_path = output_dir / "success_plot.png"
+    plt.savefig(success_path, dpi=300)
+    plt.close()
+
+    # Precision Plot
+    plt.figure(figsize=(8, 5))
+    plt.plot(
+        precision_thresholds,
+        precision_rates,
+        linewidth=2,
+        label=f"{model_name} (DP@20={dp20:.3f})",
+    )
+
+    plt.axvline(
+        x=20,
+        linestyle="--",
+        alpha=0.6,
+        label="20 px threshold",
+    )
+
+    plt.xlabel("Distance Threshold (pixels)")
+    plt.ylabel("Precision")
+    plt.title("Tracking Precision Plot")
+    plt.xlim(0, 50)
+    plt.ylim(0, 1.05)
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    precision_path = output_dir / "precision_plot.png"
+    plt.savefig(precision_path, dpi=300)
+    plt.close()
+
+    return success_path, precision_path
