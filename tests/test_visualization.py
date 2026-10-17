@@ -15,3 +15,32 @@ def test_save_initial_frame_preview_draws_init_box(tmp_path) -> None:
     with Image.open(output_path) as preview:
         assert preview.size == (400, 300)
         assert preview.getpixel((253, 150)) == (255, 0, 0)
+
+
+def test_tracking_metrics_plots(tmp_path):
+    from hsi_tracking.visualization import plot_tracking_metrics
+
+    gt = [
+        [100, 100, 50, 50],
+        [110, 100, 50, 50],
+        [120, 100, 50, 50],
+    ]
+
+    pred = [
+        [100, 100, 50, 50],
+        [115, 100, 50, 50],
+        [130, 100, 50, 50],
+    ]
+
+    success_path, precision_path = plot_tracking_metrics(
+        ground_truth_boxes=gt,
+        predicted_boxes=pred,
+        model_name="Test Model",
+        output_dir=tmp_path,
+    )
+
+    assert success_path.exists()
+    assert precision_path.exists()
+    assert success_path.stat().st_size > 0
+    assert precision_path.stat().st_size > 0
+
