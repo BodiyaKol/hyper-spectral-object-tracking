@@ -31,7 +31,10 @@ results/plots/*
 !results/plots/.gitkeep
 !results/predictions/.gitkeep
 results/visualizations/*
-!results/visualizations/.gitkeep# Byte-compiled / optimized / DLL files
+!results/visualizations/.gitkeep
+results/runs/*
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class

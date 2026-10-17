@@ -1,5 +1,6 @@
 """One-pass evaluation and HOT tracking metrics."""
 
+
 def calculate_iou(ground_truth, prediction):
     """
     Calculate Intersection over Union (IoU) between two bounding boxes.
@@ -94,15 +95,11 @@ def calculate_success_curve(
     if thresholds is None:
         thresholds = np.linspace(0, 1, 101)
 
-    ious = np.array([
-        calculate_iou(gt, pred)
-        for gt, pred in zip(ground_truth_boxes, predicted_boxes)
-    ])
+    ious = np.array(
+        [calculate_iou(gt, pred) for gt, pred in zip(ground_truth_boxes, predicted_boxes)]
+    )
 
-    success_rates = np.array([
-        np.mean(ious >= threshold)
-        for threshold in thresholds
-    ])
+    success_rates = np.array([np.mean(ious >= threshold) for threshold in thresholds])
 
     return thresholds, success_rates
 
@@ -114,7 +111,9 @@ def calculate_auc(ground_truth_boxes, predicted_boxes):
         predicted_boxes,
     )
 
-    return float(np.trapezoid(success_rates, thresholds))
+    intervals = np.diff(thresholds)
+    areas = (success_rates[:-1] + success_rates[1:]) * intervals / 2
+    return float(np.sum(areas))
 
 
 def calculate_precision_curve(
@@ -132,16 +131,13 @@ def calculate_precision_curve(
     if thresholds is None:
         thresholds = np.arange(0, 51, 1)
 
-    distances = np.array([
-        calculate_center_distance(gt, pred)
-        for gt, pred in zip(ground_truth_boxes, predicted_boxes)
-    ])
+    distances = np.array(
+        [
+            calculate_center_distance(gt, pred)
+            for gt, pred in zip(ground_truth_boxes, predicted_boxes)
+        ]
+    )
 
-    precision_rates = np.array([
-        np.mean(distances <= threshold)
-        for threshold in thresholds
-    ])
+    precision_rates = np.array([np.mean(distances <= threshold) for threshold in thresholds])
 
     return thresholds, precision_rates
-
-

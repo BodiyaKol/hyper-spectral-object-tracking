@@ -38,57 +38,59 @@ pytest
 
 Конфігурація за замовчуванням: [config/default.yaml](config/default.yaml). Навчання, конвертація HOT2026 та повний evaluation pipeline ще не реалізовані; поточний репозиторій готує відтворювану структуру для цих компонентів.
 
-## Usage: ViPT CPU demo на doll3
+## Usage: запуск ViPT на послідовності
 
-Цей запуск перевіряє, що ViPT може обробити відео, видати рамки й зберегти MP4. Він використовує upstream RGB-T checkpoint, а RGB-кадр копіює у два входи моделі, тому це лише перевірка запуску, не оцінка якості й не HSI-трекінг.
-
-Потрібні файли в `data/doll3/`: нумеровані JPG-кадри (`0001.jpg`, ...), а також `init_rect.txt` з початковою рамкою у форматі `x y width height` у пікселях. Ця папка локальна й не входить у Git; у новому клоні її треба підготувати окремо.
+Один скрипт `scripts/run_vipt.py` запускає будь-яку папку з послідовністю кадрів. Потрібні кадри у форматі JPG/PNG; їхні імена сортуються за номером. Запускай команди з кореня проєкту в Conda-середовищі `vipt`.
 
 ### Одноразове налаштування
 
-Запускай команди з кореня репозиторію. Клон ViPT і середовище `vipt` локальні та не додаються до Git.
+Якщо `vipt` ще не створений:
 
 ```bash
-# Потрібно лише один раз, якщо середовища vipt ще немає:
 conda create -n vipt python=3.7 -y
 conda activate vipt
-
-# Якщо third_party/ViPT ще не клонований:
-mkdir -p third_party && git clone https://github.com/jiawen-zhu/ViPT.git third_party/ViPT
-
-python -m pip install -r requirements-vipt-cpu.txt
-python scripts/patch_vipt_cpu.py
-python scripts/inspect_vipt.py
 ```
 
-Завантаж файл `ViPT_deep_rgbt.pth` з [офіційної RGB-T папки моделей](https://drive.google.com/drive/folders/1Czgrdh4CzPLESZuETicIZkDvo1EcdZKo) та поклади його сюди:
+Якщо upstream ViPT ще не клонований:
 
-```text
-third_party/ViPT/models/ViPT_deep_rgbt.pth
+```bash
+mkdir -p third_party
+git clone https://github.com/jiawen-zhu/ViPT.git third_party/ViPT
 ```
 
-Цей `.pth` має приблизно 357 MiB. Це checkpoint з вагами моделі, збережений у ZIP-контейнері PyTorch; **не розпаковуй його**. ViPT завантажує файл безпосередньо.
-
-### Запуск
+Потім установи CPU-залежності та застосуй CPU patch:
 
 ```bash
 conda activate vipt
-python scripts/run_doll3_vipt.py
+python -m pip install -r requirements-vipt-cpu.txt
+python scripts/patch_vipt_cpu.py
 ```
 
-Скрипт читає й сортує кадри, бере початкову рамку з `init_rect.txt`, ініціалізує нею ViPT на першому кадрі, а далі передає кадри трекеру без наступних ground-truth рамок. Для кожного кадру він малює передбачену рамку та confidence score і збирає відео:
+Завантаж checkpoint `ViPT_deep_rgbt.pth` з [офіційної RGB-T папки моделей](https://drive.google.com/drive/folders/1Czgrdh4CzPLESZuETicIZkDvo1EcdZKo) у `third_party/ViPT/models/ViPT_deep_rgbt.pth`. Це PyTorch checkpoint близько 357 MiB у ZIP-контейнері; вручну його не розпаковуй.
 
-```text
-results/visualizations/doll3_vipt_cpu.mp4
-```
+### Validation mode
 
-Щоб змінити шляхи або FPS, наприклад:
+Validation-папка має містити кадри й `init_rect.txt` з початковою рамкою `x y width height`. Наприклад:
 
 ```bash
-python scripts/run_doll3_vipt.py --sequence data/doll3 --checkpoint third_party/ViPT/models/ViPT_deep_rgbt.pth --output results/visualizations/doll3.mp4 --fps 25
+python scripts/run_vipt.py --data data/doll3/ --validation-data
 ```
 
-`best_score` у відео — оцінка впевненості ViPT, не метрика точності. Для вимірювання якості потрібні правильні рамки для наступних кадрів; зараз у `doll3` є лише початкова рамка.
+У цьому режимі модель отримує тільки початкову рамку. Скрипт зберігає відео, CSV передбачень і `metrics.json`, але не обчислює якість, бо решти ground-truth рамок немає.
+
+### Test mode
+
+Test-папка має містити кадри й `groundtruth_rect.txt` з одним `x y width height` рядком на кадр; `description.txt` необов'язковий. Наприклад:
+
+```bash
+python scripts/run_vipt.py --data data/ball/ --test-data
+```
+
+Перший рядок ground truth використовується тільки для ініціалізації на першому кадрі. Інші GT-рамки скрипт не передає трекеру: він спершу отримує передбачення, а після цього використовує GT для аналізу помилки. У відео GT рамка зелена, передбачення червоне.
+
+Обидва режими за замовчуванням створюють файли в `results/runs/<назва-папки>_<режим>/`. У test mode це `tracking.mp4`, `predictions.csv`, `metrics.json`, `success_plot.png` (AUC) і `precision_plot.png` (DP@20). У summary також записуються mean IoU, середня похибка центра й FPS. Шлях можна змінити через `--output-dir`.
+
+**Обмеження smoke test:** upstream RGB-T checkpoint отримує RGB, продубльований у другі три канали. Це перевіряє запуск моделі на CPU, але не є справжнім HSI-трекінгом; метрики цього режиму не слід трактувати як результат запропонованої HSI-адаптації.
 
 ## Структура репозиторію
 
