@@ -166,6 +166,16 @@ def train_hsi_adapters(
         device=device,
         input_scale=input_scale,
     )
+    total_parameters = sum(parameter.numel() for parameter in model.parameters())
+    trainable_parameters = model.trainable_parameter_count()
+    trainable_ratio = trainable_parameters / float(total_parameters)
+    if trainable_ratio >= 0.03:
+        raise ValueError(
+            f"Trainable parameter budget is {trainable_ratio:.2%}; proposal limit is below 3%"
+        )
+    print(
+        f"Sensor={sensor} sequences={len(sequence_dirs)} trainable={trainable_parameters:,}/{total_parameters:,} ({trainable_ratio:.3%})"
+    )
     model.train()
     dataset = HSIFramePairDataset(
         sequence_dirs,
@@ -181,6 +191,9 @@ def train_hsi_adapters(
         shuffle=True,
         num_workers=num_workers,
         drop_last=False,
+    )
+    print(
+        f"Training pairs={len(dataset)} batch_size={batch_size} optimizer=AdamW lr={learning_rate}"
     )
     optimizer = torch.optim.AdamW(model.trainable_parameters(), lr=learning_rate)
     output_dir = Path(output_dir).expanduser().resolve()
@@ -219,6 +232,8 @@ def train_hsi_adapters(
             "epoch": epoch + 1,
             "steps": len(epoch_losses),
             "mean_loss": float(np.mean(epoch_losses)) if epoch_losses else None,
+            "trainable_parameters": trainable_parameters,
+            "trainable_parameter_ratio": trainable_ratio,
         }
         history.append(record)
         model.save_adapters(
