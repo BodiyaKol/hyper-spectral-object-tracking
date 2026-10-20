@@ -33,6 +33,10 @@ results/plots/*
 results/visualizations/*
 !results/visualizations/.gitkeep
 results/runs/*
+results/full-model/*
+results/convolution_testing/*
+results/projector_testing/*
+results/cnn_adapter_testing/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -36,7 +36,7 @@ python -m pip install torch  # choose the matching command from pytorch.org for 
 pytest
 ```
 
-Конфігурація за замовчуванням: [config/default.yaml](config/default.yaml). Навчання, конвертація HOT2026 та повний evaluation pipeline ще не реалізовані; поточний репозиторій готує відтворювану структуру для цих компонентів.
+Конфігурація проєкту: [config/default.yaml](config/default.yaml). Для HSI вже є X2Cube/loader, projector, CNN Prompt-Adapter, experimental ViPT integration і мінімальний adapter-training loop. Як їх запускати й що ще обмежене описано в [інструкції CNN adapter](scripts/cnn-adapter/README.md). Це поки прототип, а не перевірений результат HOT challenge.
 
 ## Usage: запуск ViPT на послідовності
 
