@@ -256,3 +256,10 @@ __marimo__/
 # Local upstream ViPT checkout and its isolated environment.
 /third_party/ViPT/
 /.venv-vipt/
+
+# Local SAMURAI installation and isolated Python environment.
+/third_party/SAMURAI/
+/.venv-samurai/
+
+# macOS system files
+.DS_Store
