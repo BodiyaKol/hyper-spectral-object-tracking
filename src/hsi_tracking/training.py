@@ -11,7 +11,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from hsi_tracking.data.dataset import HSI_EXTENSIONS, load_hsi_sequence
-from hsi_tracking.models.tracker import build_hsi_adapted_vipt
+from hsi_tracking.models.tracker import build_hsi_adapted_vipt, resolve_device
 
 
 class HSIFramePairDataset(Dataset):
@@ -151,15 +151,23 @@ def train_hsi_adapters(
     learning_rate=1e-4,
     giou_weight=2.0,
     max_steps=0,
+    max_sequences=None,
     input_scale=255.0,
     num_workers=0,
-    device="cpu",
+    device="auto",
 ):
     """Train only the spectral projector and CNN prompt adapter; return history."""
     if epochs < 1 or batch_size < 1 or learning_rate <= 0:
         raise ValueError("epochs, batch_size and learning_rate must be positive")
 
+    device = resolve_device(device)
     sequence_dirs = discover_training_sequences(data_root)
+    if max_sequences is not None:
+        if max_sequences < 1:
+            raise ValueError("max_sequences must be positive or None")
+        sequence_dirs = sequence_dirs[:max_sequences]
+        if not sequence_dirs:
+            raise ValueError("No training sequences selected")
     model, cfg = build_hsi_adapted_vipt(
         sensor=sensor,
         checkpoint=base_checkpoint,

@@ -25,6 +25,7 @@ from hsi_tracking.models.spectral_projector import get_sensor_spec
 from hsi_tracking.models.tracker import (
     HSISequenceTracker,
     build_hsi_adapted_vipt,
+    resolve_device,
 )
 from hsi_tracking.visualization import plot_tracking_metrics
 
@@ -70,7 +71,7 @@ def main():
     parser.add_argument("--input-scale", type=float, default=255.0)
     parser.add_argument("--fps", type=float, default=25.0)
     parser.add_argument("--threads", type=int, default=2)
-    parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
+    parser.add_argument("--device", default="auto", choices=("auto", "cpu", "cuda"))
     args = parser.parse_args()
 
     if not args.adapter_checkpoint and not args.allow_untrained:
@@ -94,7 +95,7 @@ def main():
         run_mode = "validation"
 
     torch.set_num_threads(max(1, args.threads))
-    device = torch.device("cuda" if args.device == "cuda" and torch.cuda.is_available() else "cpu")
+    device = resolve_device(args.device)
     model, cfg = build_hsi_adapted_vipt(
         args.sensor,
         args.base_checkpoint,

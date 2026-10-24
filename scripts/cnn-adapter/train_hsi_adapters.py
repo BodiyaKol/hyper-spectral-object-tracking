@@ -34,9 +34,14 @@ def main():
         default=0,
         help="stop after this many optimizer steps; 0 means full run",
     )
+    parser.add_argument(
+        "--max-sequences",
+        type=int,
+        help="use only the first N labeled sequences for a quick experiment",
+    )
     parser.add_argument("--input-scale", type=float, default=255.0)
     parser.add_argument("--threads", type=int, default=2)
-    parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
+    parser.add_argument("--device", default="auto", choices=("auto", "cpu", "cuda"))
     args = parser.parse_args()
 
     torch_root = Path(args.base_checkpoint).expanduser().resolve()
@@ -58,6 +63,7 @@ def main():
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
         max_steps=args.max_steps,
+        max_sequences=args.max_sequences,
         input_scale=args.input_scale,
         device=args.device,
     )

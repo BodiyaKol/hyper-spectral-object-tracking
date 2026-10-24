@@ -16,6 +16,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_VIPT_ROOT = PROJECT_ROOT / "third_party" / "ViPT"
 
 
+def resolve_device(device: str | torch.device = "auto") -> torch.device:
+    """Resolve auto/cpu/cuda and fail clearly for unavailable requested CUDA."""
+    if str(device) == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    resolved = torch.device(device)
+    if resolved.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "CUDA was requested, but this PyTorch runtime has no available CUDA device"
+        )
+    return resolved
+
+
 class HSIAdaptedViPT(nn.Module):
     """Frozen pretrained ViPT with a trainable projector and CNN prompt adapter."""
 
@@ -116,7 +128,7 @@ class HSIAdaptedViPT(nn.Module):
 def build_hsi_adapted_vipt(
     sensor: str,
     checkpoint: str | Path,
-    device: str | torch.device = "cpu",
+    device: str | torch.device = "auto",
     vipt_root: str | Path = DEFAULT_VIPT_ROOT,
     input_scale: float = 255.0,
 ):
@@ -129,6 +141,7 @@ def build_hsi_adapted_vipt(
         raise FileNotFoundError(f"ViPT checkpoint not found: {checkpoint}")
     if str(vipt_root) not in sys.path:
         sys.path.insert(0, str(vipt_root))
+    device = resolve_device(device)
 
     from lib.config.vipt.config import cfg, update_config_from_file
     from lib.models.vipt import build_viptrack
@@ -147,7 +160,7 @@ def build_hsi_adapted_vipt(
 class HSISequenceTracker:
     """Initialize with one HSI frame/BBox, then track HSI frames in HWC format."""
 
-    def __init__(self, model: HSIAdaptedViPT, cfg, device: str | torch.device = "cpu") -> None:
+    def __init__(self, model: HSIAdaptedViPT, cfg, device: str | torch.device = "auto") -> None:
         if str(DEFAULT_VIPT_ROOT) not in sys.path:
             sys.path.insert(0, str(DEFAULT_VIPT_ROOT))
         from lib.test.utils.hann import hann2d
@@ -156,7 +169,7 @@ class HSISequenceTracker:
 
         self.model = model
         self.cfg = cfg
-        self.device = torch.device(device)
+        self.device = resolve_device(device)
         self.sample_target = sample_target
         self.clip_box = clip_box
         self.template_factor = cfg.TEST.TEMPLATE_FACTOR
