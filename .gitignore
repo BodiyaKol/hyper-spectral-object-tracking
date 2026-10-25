@@ -16,6 +16,7 @@ htmlcov/
 data/raw/*
 !data/raw/.gitkeep
 !data/raw/README.md
+data/
 data/interim/*
 !data/interim/.gitkeep
 data/processed/*
@@ -26,9 +27,18 @@ models/*
 !models/.gitkeep
 !models/README.md
 results/predictions/*
+results/plots/*
+!results/plots/.gitkeep
 !results/predictions/.gitkeep
 results/visualizations/*
-!results/visualizations/.gitkeep# Byte-compiled / optimized / DLL files
+!results/visualizations/.gitkeep
+results/runs/*
+results/full-model/*
+results/convolution_testing/*
+results/projector_testing/*
+results/cnn_adapter_testing/*
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
@@ -246,3 +256,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local upstream ViPT checkout and its isolated environment.
+/third_party/ViPT/
+/.venv-vipt/
+
+# Local SAMURAI installation and isolated Python environment.
+/third_party/SAMURAI/
+/.venv-samurai/
+
+# macOS system files
+.DS_Store
