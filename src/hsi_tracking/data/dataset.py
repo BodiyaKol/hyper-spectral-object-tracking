@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import csv
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Tuple  # noqa: UP035
 
 import numpy as np
 from PIL import Image
 
 from hsi_tracking.data.x2cube import get_sensor_spec, load_mosaic, mosaic_to_cube
 
-BBox = tuple[float, float, float, float]
+BBox = Tuple[float, float, float, float]  # noqa: UP006
 
 
 @dataclass

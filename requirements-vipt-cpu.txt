@@ -15,3 +15,4 @@ scipy==1.7.3
 timm==0.5.4
 tensorboardX==2.6.2.2
 matplotlib==3.5.3
+pytest==7.4.4

@@ -4,7 +4,7 @@ Use numbered notebooks for exploratory work, keeping reusable pipeline code in `
 
 Planned notebooks:
 
-- `01-data-exploration.ipynb`: inspect HOT2026 metadata, channel counts, and sample sequences.
-- `02-false-color-baselines.ipynb`: explore false-color inputs and baseline predictions.
-- `03-adapter-analysis.ipynb`: compare sensor-specific and shared adapter behavior.
-- `04-error-analysis.ipynb`: analyze failures by sensor and tracking condition.
+- `01_data_and_preprocessing.ipynb`: inspect HOT2026 data, annotations, sensor channels, and preprocessing.
+- `02_hsi_adapter_training.ipynb`: check the runtime and ViPT checkpoint, select HSI sequences, run a bounded smoke test or full adapter training, inspect artifacts, and perform a short inference check.
+
+Reusable pipeline logic belongs in `src/hsi_tracking/`; notebooks are experiment and demonstration workflows. The HSI notebook does not implement cross-validation or a validation loop during training.
