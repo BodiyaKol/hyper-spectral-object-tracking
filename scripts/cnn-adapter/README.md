@@ -1,74 +1,73 @@
-# CNN Adapter Experiments
+# HSI ViPT Adapter
 
-These scripts patch the ignored upstream ViPT checkout for CPU + external HSI prompts, train the spectral projector/CNN prompt adapter, and run HSI inference.
+These scripts adapt upstream ViPT for hyperspectral mosaics. A sensor-specific 1×1 spectral projector makes three pseudo-RGB channels; a CNN generates external prompts for each ViT block. The ViPT backbone and bbox head are initialized from `ViPT_deep_rgbt.pth` and frozen; training updates only the projector and prompt adapter.
 
-## One-time setup
+The HSI path is experimental, not an official upstream HSI model. It has completed a five-epoch Colab T4 training run, but tracking quality remains low on the one documented held-out sequence. There is no validation loop or cross-validation during training.
 
-Run from the project root with the dedicated Python 3.7 `vipt` Conda environment active:
+## Environment and patching
+
+Run commands from the repository root. The local `requirements-vipt-cpu.txt` describes the legacy Python 3.7/PyTorch 1.7 CPU environment. For Colab GPU, select a GPU runtime and install `requirements-vipt-colab.txt`, which deliberately leaves Colab's CUDA PyTorch intact. Do not install the CPU requirements or run upstream `install_vipt.sh` in a GPU runtime.
+
+Clone upstream ViPT and prepare the checkout once per environment:
 
 ```bash
+git clone https://github.com/jiawen-zhu/ViPT.git third_party/ViPT
 python scripts/cnn-adapter/patch_vipt_hsi.py
 ```
 
-The patcher first applies CPU compatibility fixes, then adds `external_prompts` to the ViPT forward path. In HSI mode the projected 3-channel template/search go through the RGB patch embedding; a prompt tensor is added before every transformer block. Candidate elimination is disabled for this mode to preserve prompt/token alignment. The patcher is idempotent. The base checkpoint is expected at `third_party/ViPT/models/ViPT_deep_rgbt.pth`.
+The patcher applies CPU/device compatibility changes and adds `external_prompts` to the ViPT transformer path. It disables candidate elimination in HSI prompt mode to keep prompt/token alignment. The patcher is idempotent. Put the RGB-T initialization checkpoint at `third_party/ViPT/models/ViPT_deep_rgbt.pth`; it initializes ViPT but is not an HSI-trained model.
 
-## CPU and Colab GPU
+In Colab, confirm CUDA before training:
 
-Both training and inference accept `--device auto|cpu|cuda`; `auto` selects CUDA when `torch.cuda.is_available()` is true, otherwise CPU. The local `requirements-vipt-cpu.txt` installs CPU-only Torch and must **not** be used in a GPU Colab runtime.
-
-In Colab, first select **Runtime → Change runtime type → GPU**, clone this project and ViPT, mount Drive, then install the other dependencies without replacing Colab's Torch:
-
-```bash
-!pip install -r requirements-vipt-colab.txt
-!python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-!python scripts/cnn-adapter/patch_vipt_hsi.py
+```python
+import torch
+print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))
 ```
 
-The GPU check must print `True` before training. Keep the dataset on mounted Drive or copy a working subset into `/content`; set `--data` to a folder containing sequence subfolders with HSI mosaics and `groundtruth_rect.txt`. Put the ViPT checkpoint at `third_party/ViPT/models/ViPT_deep_rgbt.pth`.
+The recorded 5-epoch run completed on a Colab T4 with Python 3.13/PyTorch 2.11 CUDA. Other upstream/PyTorch combinations may expose compatibility differences.
 
-Example Colab smoke training (change `--data` to the actual Drive folder):
+## Data and training
 
-```bash
-!python scripts/cnn-adapter/train_hsi_adapters.py \
-  --data /content/drive/MyDrive/HOT2026/train/VIS \
-  --sensor VIS --epochs 1 --max-steps 10 --device auto \
-  --output-dir /content/drive/MyDrive/hsi-results/automobile4_VIS/training_smoke
-```
-
-The training CLI and model automatically move tensors and weights to the selected device. CUDA execution is supported by the current code path, but has not yet been validated on an actual Colab GPU; the upstream ViPT code and its older `timm` dependency may need compatibility fixes in Colab's current runtime. The 10-step example verifies execution only, not tracking quality.
-
-## Training
-
-Each sequence folder must contain HSI mosaic frames and `groundtruth_rect.txt` with one `x y width height` box per frame. Start with a one-step pipeline check:
+Each HSI sequence directory needs mosaic frames (`.png`, `.tif`, or `.tiff`) and `groundtruth_rect.txt` with one `x y width height` bbox per frame. Pass either a sequence directory or a root containing sequence directories to `--data`; discovery is recursive.
 
 ```bash
 python scripts/cnn-adapter/train_hsi_adapters.py \
-  --data data/automobile4 \
+  --data /path/to/HOT2026/training/HSI-VIS \
   --sensor VIS \
-  --epochs 1 \
-  --max-steps 1 \
-  --output-dir results/full-model/automobile4_VIS/training_smoke
+  --base-checkpoint third_party/ViPT/models/ViPT_deep_rgbt.pth \
+  --epochs 5 --device auto \
+  --output-dir results/full-model/hsi_vis/training
 ```
 
-This performs only one optimizer step; it does **not** train a useful tracker. For an actual experiment, remove `--max-steps 1`, choose a suitable `--epochs` value, and train on the training split. Adapter weights and `training_history.json` are saved to the output directory. Defaults use CPU, batch size 1, learning rate `1e-4`, and raw HSI input divided by `255`; confirm the sensor's data scale before a full run. CPU is intended for smoke tests; full training will be very slow.
+Use `--max-steps 1` for a pipeline smoke test, not a quality run. Defaults are batch size 1, learning rate `1e-4`, input scale 255, and zero DataLoader workers. Adjacent valid GT frames form template/search pairs; the DataLoader shuffles these pairs each epoch. Loss is Smooth L1 plus `2 × (1 - GIoU)`, with gradient clipping at 0.1.
 
-Training pairs adjacent labeled frames. The first frame is the template; the next frame is the search crop. The tracker backbone and prediction head stay frozen; only projector and prompt-adapter parameters are optimized with Smooth L1 plus GIoU loss. The adapter emits 12 prompt maps of `B×N×768` for ViT-Base, one before each transformer block.
+The trainer records `adapter_latest.pth` and `training_history.json` in `--output-dir`. A full run (`--max-steps 0`) also overwrites the local latest copy in `models/hsi_adapters/`; smoke runs do not. It starts from the base ViPT checkpoint each run; optimizer state is not resumed. In Colab, copy outputs to persistent Drive before the runtime ends.
 
-## Inference
+## Inference and outputs
 
-Run with the saved adapter checkpoint. For labeled test data, the first GT box initializes tracking; later boxes are only used for metrics:
+Labeled test sequence:
 
 ```bash
 python scripts/cnn-adapter/run_hsi_vipt.py \
-  --data data/automobile4 \
-  --sensor VIS \
-  --test-data \
-  --adapter-checkpoint results/full-model/automobile4_VIS/training_smoke/adapter_latest.pth \
-  --output-dir results/full-model/automobile4_VIS/test_smoke
+  --data /path/to/labeled_sequence --sensor VIS --test-data \
+  --adapter-checkpoint models/hsi_adapters/adapter_latest.pth \
+  --output-dir results/full-model/example_VIS/test --device auto
 ```
 
-By default, training saves to `results/full-model/<sequence>_<sensor>/training/`; inference saves to `results/full-model/<sequence>_<sensor>/<mode>/`. Outputs include `tracking.mp4`, `predictions.csv`, `metrics.json`, and test-mode plots. `--allow-untrained` is only for shape/forward smoke tests and produces arbitrary predictions. Generated full-model artifacts are ignored by Git.
+Validation sequence with only `init_rect.txt`:
 
-## Current limitation
+```bash
+python scripts/cnn-adapter/run_hsi_vipt.py \
+  --data /path/to/validation_sequence --sensor VIS --validation-data \
+  --adapter-checkpoint models/hsi_adapters/adapter_latest.pth \
+  --output-dir results/full-model/example_VIS/validation --device auto
+```
 
-Upstream ViPT is pretrained for RGB plus a second 3-channel modality. The HSI path is an experimental adaptation: the cube is projected to pseudo-RGB and CNN-generated prompts are injected into the frozen transformer. There is no official upstream HSI checkpoint. Until the adapters are trained and validated, predictions are not meaningful HSI results. CPU training is only suitable for tiny smoke tests.
+If `--adapter-checkpoint` is omitted, inference uses `models/hsi_adapters/adapter_latest.pth`. Test mode produces `tracking.mp4`, `predictions.csv`, `metrics.json`, `success_plot.png`, and `precision_plot.png`; validation mode cannot compute accuracy without full ground truth. `--allow-untrained` is for forward/shape smoke tests only.
+
+## Known limitations
+
+- Training loss is measured on training pairs; no validation metrics are computed during epochs.
+- Training search crops are centered using the previous-frame ground-truth bbox, so training does not fully simulate tracker drift.
+- The saved 10-video run improved AUC from 0.0377 to 0.0702 on `automobile4`, but the absolute score remains low and the tracker can switch to a distractor.
+- CPU is practical for inference/smoke checks, but full training is slow.

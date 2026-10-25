@@ -155,6 +155,12 @@ def main():
 
     patch_file(
         repo,
+        Path("lib/train/data/loader.py"),
+        [("from torch._six import string_classes\n", "string_classes = str\n")],
+    )
+
+    patch_file(
+        repo,
         Path("lib/train/data/image_loader.py"),
         [
             (

@@ -1,5 +1,8 @@
 # Model Checkpoints
 
-Store downloaded pretrained checkpoints and trained weights locally in this directory. Checkpoints are excluded from Git because of their size and the upstream model's license terms.
+Model files are local artifacts and are excluded from Git.
 
-The project plans to integrate ViPT from [its upstream repository](https://github.com/jiawen-zhu/ViPT). Before downloading or redistributing code or weights, review the upstream license and cite the original work. The configured checkpoint path is `models/vipt.pth`.
+- `hsi_adapters/adapter_latest.pth`: most recently completed full HSI adapter training run.
+- `hsi_adapters/training_history.json`: per-epoch loss and parameter counts for that run.
+
+The upstream ViPT initialization checkpoint is stored separately at `third_party/ViPT/models/ViPT_deep_rgbt.pth`. It initializes the frozen RGB-T backbone/head; it is not an HSI-trained checkpoint. Review upstream license terms before redistributing it.

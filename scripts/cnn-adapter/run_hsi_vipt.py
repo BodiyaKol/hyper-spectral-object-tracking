@@ -22,6 +22,7 @@ from hsi_tracking.evaluation import (
     calculate_iou,
 )
 from hsi_tracking.models.spectral_projector import get_sensor_spec
+from hsi_tracking.training import DEFAULT_ADAPTER_DIR
 from hsi_tracking.models.tracker import (
     HSISequenceTracker,
     build_hsi_adapted_vipt,
@@ -74,10 +75,14 @@ def main():
     parser.add_argument("--device", default="auto", choices=("auto", "cpu", "cuda"))
     args = parser.parse_args()
 
+    default_checkpoint = DEFAULT_ADAPTER_DIR / "adapter_latest.pth"
     if not args.adapter_checkpoint and not args.allow_untrained:
-        parser.error(
-            "Pass --adapter-checkpoint from training, or --allow-untrained for a smoke test"
-        )
+        if not default_checkpoint.is_file():
+            parser.error(
+                f"Pass --adapter-checkpoint, put weights in {default_checkpoint}, "
+                "or use --allow-untrained for a smoke test"
+            )
+        args.adapter_checkpoint = default_checkpoint
     sequence = load_hsi_sequence(args.data, args.sensor, false_color_dir=args.false_color)
     if not len(sequence):
         parser.error(f"No HSI frames found in {args.data}")

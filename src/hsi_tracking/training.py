@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +13,20 @@ from torch.utils.data import DataLoader, Dataset
 
 from hsi_tracking.data.dataset import HSI_EXTENSIONS, load_hsi_sequence
 from hsi_tracking.models.tracker import build_hsi_adapted_vipt, resolve_device
+
+# Latest full-run adapter weights; overwritten by every full training run.
+DEFAULT_ADAPTER_DIR = Path(__file__).resolve().parents[2] / "models" / "hsi_adapters"
+ADAPTER_FILES = ("adapter_latest.pth", "training_history.json")
+
+
+def _publish_adapter(output_dir, latest_dir, name):
+    if latest_dir is None:
+        return
+    latest_dir = Path(latest_dir).expanduser().resolve()
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    source = Path(output_dir) / name
+    if source.is_file():
+        shutil.copy2(source, latest_dir / name)
 
 
 class HSIFramePairDataset(Dataset):
@@ -155,8 +170,15 @@ def train_hsi_adapters(
     input_scale=255.0,
     num_workers=0,
     device="auto",
+    latest_dir=DEFAULT_ADAPTER_DIR,
 ):
-    """Train only the spectral projector and CNN prompt adapter; return history."""
+    """Train only the spectral projector and CNN prompt adapter; return history.
+
+    Full runs (max_steps=0) also copy the checkpoint and history into latest_dir,
+    overwriting the previous ones; pass latest_dir=None to disable.
+    """
+    if max_steps:
+        latest_dir = None
     if epochs < 1 or batch_size < 1 or learning_rate <= 0:
         raise ValueError("epochs, batch_size and learning_rate must be positive")
 
@@ -248,6 +270,7 @@ def train_hsi_adapters(
             output_dir / "adapter_latest.pth",
             extra={"sensor": sensor, "epoch": epoch + 1, "history": history},
         )
+        _publish_adapter(output_dir, latest_dir, "adapter_latest.pth")
         print("Saved adapter checkpoint; epoch summary:", record)
         if max_steps and global_step >= max_steps:
             break
@@ -255,4 +278,5 @@ def train_hsi_adapters(
     (output_dir / "training_history.json").write_text(
         json.dumps(history, indent=2), encoding="utf-8"
     )
+    _publish_adapter(output_dir, latest_dir, "training_history.json")
     return history
